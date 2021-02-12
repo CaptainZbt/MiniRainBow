@@ -1,8 +1,8 @@
 # RainBowData  
 爬取公网的各种资源  
 
-GIT配置： 
-git clone 
+GIT配置：  
+git clone https://github.com/CaptainZbt/MiniRainBow.git
 
 爬虫中的请求头：  
 header参数需要根据自己的header设置，具体怎么获取，可以百度  

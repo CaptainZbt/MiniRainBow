@@ -1,4 +1,4 @@
-# RainBowData  
+# MiniRainBow  
 爬取公网的各种资源  
 
 GIT配置：  

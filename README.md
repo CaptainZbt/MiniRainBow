@@ -1,10 +1,8 @@
 # RainBowData  
 爬取公网的各种资源  
 
-GIT配置：  
-https://blog.csdn.net/liuweixiao520/article/details/78971221  
-https://www.cnblogs.com/jf-67/p/6415637.html  
-https://www.cnblogs.com/kesz/p/10921987.html  
+GIT配置： 
+git clone 
 
 爬虫中的请求头：  
 header参数需要根据自己的header设置，具体怎么获取，可以百度  

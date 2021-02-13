@@ -19,5 +19,7 @@ header参数需要根据自己的header设置，具体怎么获取，可以百�
 小说下载：python NovelSpider.py  
 ```
 
-版本：V0.1
-提示：当前初始阶段，继续优化中
+版本：V0.1   
+提示：当前初始阶段，继续优化中  
+仅限于图片：https://www.youwu333.com/  
+仅限于小说：https://www.duquanben.com/  

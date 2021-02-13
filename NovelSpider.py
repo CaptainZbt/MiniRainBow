@@ -6,7 +6,7 @@ import os
 import time
 import eventlet
 
-def main(rootPath,headers,listUrl):
+def main(rootPath,listUrl):
     # 创建本次爬虫存储根路径
     falg = os.path.exists(rootPath)
     if (falg == False):
@@ -16,96 +16,119 @@ def main(rootPath,headers,listUrl):
         except:
             print("创建文件夹失败，根目录已存在")
 
-    # 获取列表页的内容,列表页的url
+    # 获取首页的内容
     req = requests.get(listUrl)
     req.encoding = "gbk"
     html = req.text
-
-    # 获取列表页的各个写真集url
-    reg1 = r'href="/map\S+\.html'
+    # 获取各个分类页面的url
+    reg1 = r'/book\d\S+\d/'
     urlList = set(re.findall(reg1, html))
-    reg2 = r'href="/book/sort\S+/'
-    urlList = set(re.findall(reg2, html))
 
-
-    # 遍历列表页中的url
-    for url in urlList:
-        # 获取写真集的内容
+    # 遍历分类页中的url
+    for index in urlList:
+        tempurl="https://www.duquanben.com"+index
+        # 获取分类页中的内容
         try:
-            novelListReq = requests.get(url)
-            print("获取网页内容成功，网页url：" + url)
+            novelClassReq = requests.get(tempurl)
+            print("获取分类页网页内容成功，网页url：" + tempurl)
         except:
-            print("获取网页内容失败，网页url：" + url)
+            print("获取分类页网页内容失败，网页url：" + tempurl)
             continue
-        novelListReq.encoding = "gbk"
-        picConent = novelListReq.text
-        listreg = r'https://www\S+\d/'
-        novelListUrl = set(re.findall(listreg, picConent))
+        novelClassReq.encoding = "gbk"
+        classListConent = novelClassReq.text
+        # 获取分类页所有子页的url
+        bf = BeautifulSoup(classListConent)
+        lastCon = bf.findAll(class_="last")
+        lastStr = "".join([str(x) for x in lastCon])
+        maxNum = lastStr.split(">")[1].split("<")[0]
 
-        # 创建该写真存储的本地文件夹
-        dirpath = rootPath + "\\" + picTitle
-        falg = os.path.exists(dirpath)
-        if (falg == False):
+        childUrl=[]
+        for i in range(1,2):#int(maxNum)
+            endStr = "/" + index.split("/")[1] + "/" + index.split("/")[2] + "/" + str(i) + "/"
+            url = "https://www.duquanben.com" + endStr
+            childUrl.append(url)
+
+        bookUrls=[]
+        # 遍历每一个子页
+        for childurl in childUrl:
+            # 获取子页中的内容
             try:
-                os.mkdir(dirpath)
-                print("创建写真文件夹成功，文件夹名：" + dirpath)
+                childContentReq = requests.get(childurl)
+                print("获取子页内容成功，网页url：" + childurl)
             except:
-                print("创建写真文件夹失败，文件夹已存在，文件夹名：" + dirpath)
+                print("获取子页内容失败，网页url：" + childurl)
                 continue
-        # 获取当前页面中的图片
-        jpgReg = r'https://pic\S+\.jpg'
-        picUrlList = re.findall(jpgReg, picConent)
+            childContentReq.encoding = "gbk"
+            childContent = childContentReq.text
+            # 获取子页中的每个书的url
+            bookreg = r'https://www.duquanben.com/xiaoshuo\S+\d/'
+            bookUrl = set(re.findall(bookreg, childContent))
+            bookUrls.extend(bookUrl)
 
-        # 从html内容中获取各个分类页的url
-        otherReg = r'href=\'\d\S+\.html'
-        otherIndexList = set(re.findall(otherReg, picConent))
-        # 从各个分类页中获取图片的url，然后累加到图片的list中
-        for otherIndex in otherIndexList:
-            # 截取拼接url字符串
-            indexStr = otherIndex.replace("href=\'", "")
-            replaceStr = indexStr.split("_")[0]
-            endStr = indexStr.split(".")[0]
-            otherUrl = url.replace(replaceStr, endStr)
-
-            # 获取各个图片的url，累加一起
+        # 遍历每一本书的url
+        for bookurl in bookUrls:
+            # 获取书中的章节内容
             try:
-                otherPicReq = requests.get(otherUrl)
-                print("获取网页内容成功，网页url：" + otherUrl)
+                bookChapterReq = requests.get(bookurl)
+                print("获取书的章节内容成功，网页url：" + bookurl)
             except:
-                print("获取网页内容失败，网页url：" + otherUrl)
+                print("获取书的章节内容失败，网页url：" + bookurl)
                 continue
-            otherPicReq.encoding = "gbk"
-            otherPicConent = otherPicReq.text
-            otherPicList = re.findall(jpgReg, otherPicConent)
-            picUrlList.extend(otherPicList)
+            bookChapterReq.encoding = "gbk"
+            chapterContent = bookChapterReq.text
 
-        # 遍历图片url,开始下载图片
-        x = 0
-        for imageUrl in picUrlList:
-            path = dirpath + "\\" + str(x) + ".jpg"
-            print(path)
-            print(imageUrl)
-            eventlet.monkey_patch()  # 必须加这条代码
-            with eventlet.Timeout(5, False):  # 设置超时时间为2秒
+            # 获取书名
+            bookBF = BeautifulSoup(chapterContent)
+            bookName = bookBF.head.title.string.split("_")[0].replace("全文阅读","")
+            # 获取每一本书的所有章节目录的url
+            chapterReg = r'href="\d\S+\d.html'
+            chaUrlList = set(re.findall(chapterReg, chapterContent))
+            # 按照书名创建文件夹
+            bookPath=rootPath+"\\"+bookName
+            bookfalg = os.path.exists(bookPath)
+            if (bookfalg == False):
                 try:
-                    img = requests.get(imageUrl, headers=headers).content
-                    with open(path, 'wb') as f:
-                        f.write(img)
-                        print("正在下载{}第{}张图片".format(picTitle, x))
+                    os.mkdir(bookPath)
+                    print("创建小说目录成功，小说目录：" + bookPath)
                 except:
-                    print('{}第{}张图片下载失败'.format(picTitle, x))
-            x += 1
-            time.sleep(0.5)
-        break
+                    print("创建文件夹失败，小说目录已存在")
 
+            # 遍历每一个章节目录的url
+            for chapterurl in chaUrlList:
+                chapterUrl=bookurl+chapterurl.replace("href=\"","")
+                # 获取章节中的内容
+                try:
+                    contentReq = requests.get(chapterUrl)
+                    print("获取章节中正文内容成功，网页url：" + chapterUrl)
+                except:
+                    print("获取章节中正文内容失败，网页url：" + chapterUrl)
+                    continue
+                contentReq.encoding = "gbk"
+                contenthtml = contentReq.text
+
+                # 获取章节中的章节名
+                contentBF = BeautifulSoup(contenthtml)
+                ChapterName = contentBF.head.title.string.split("_")[0]
+                # 获取章节中的正文
+                content=contentBF.find('div',id='htmlContent',class_='contentbox').text.split("\n")[1]
+                #将内容记录到文本中
+                eventlet.monkey_patch()
+                with eventlet.Timeout(5, False):  # 设置超时时间为5秒，每个章节下载时长不超过5s，否则超时退出
+                    try:
+                        chapterPath=bookPath+"\\"+ChapterName+".txt"
+                        with open(chapterPath, 'a', encoding='utf-8') as f:
+                            f.write(ChapterName + '\n')  # 写入名字并换行
+                            f.writelines(content)  # 追加内容
+                            f.write('\n\n')  # 换两行
+                            print("创建章节文件成功，文件名:"+chapterPath)
+                    except:
+                        print("创建章节文件失败，文件名:"+chapterPath)
+                time.sleep(0.5)
 
 if __name__ == "__main__":
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36 Edg/87.0.664.75'
-    }
     rootPath = "C:\\迅雷下载\\爬虫1028"
     listUrl="https://www.duquanben.com/"
-    main(rootPath,headers,listUrl)
+    main(rootPath,listUrl)
 
 
 
